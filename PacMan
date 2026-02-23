@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Mini Pac-Man</title>
+<style>
+    body {
+        margin: 0;
+        background: black;
+        overflow: hidden;
+        font-family: Arial;
+        color: red;
+    }
+    canvas {
+        display: block;
+        margin: auto;
+        background: black;
+    }
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+canvas.width = 600;
+canvas.height = 400;
+
+let player = { x: 50, y: 50, size: 20, speed: 3 };
+let ghost = { x: 500, y: 300, size: 20, speed: 2 };
+let food = { x: 300, y: 200, size: 10 };
+
+let score = 0;
+let lives = 3;
+let mouthOpen = true;
+let gameOver = false;
+
+let walls = [
+    {x:100,y:100,w:400,h:20},
+    {x:100,y:280,w:400,h:20},
+    {x:100,y:120,w:20,h:160},
+    {x:480,y:120,w:20,h:160}
+];
+
+let keys = {};
+
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+function rectsCollide(a,b){
+    return a.x < b.x + b.w &&
+           a.x + a.w > b.x &&
+           a.y < b.y + b.h &&
+           a.y + a.h > b.y;
+}
+
+function spawnFood(){
+    food.x = Math.random() * (canvas.width - food.size);
+    food.y = Math.random() * (canvas.height - food.size);
+}
+
+function update(){
+    if(gameOver) return;
+
+    let oldX = player.x;
+    let oldY = player.y;
+
+    if(keys["ArrowLeft"]) player.x -= player.speed;
+    if(keys["ArrowRight"]) player.x += player.speed;
+    if(keys["ArrowUp"]) player.y -= player.speed;
+    if(keys["ArrowDown"]) player.y += player.speed;
+
+    let playerRect = {x:player.x,y:player.y,w:player.size,h:player.size};
+
+    for(let wall of walls){
+        if(rectsCollide(playerRect,{x:wall.x,y:wall.y,w:wall.w,h:wall.h})){
+            player.x = oldX;
+            player.y = oldY;
+        }
+    }
+
+    player.x = Math.max(0, Math.min(canvas.width-player.size, player.x));
+    player.y = Math.max(0, Math.min(canvas.height-player.size, player.y));
+
+    if(Math.abs(player.x-food.x)<15 && Math.abs(player.y-food.y)<15){
+        score++;
+        spawnFood();
+    }
+
+    if(ghost.x < player.x) ghost.x += ghost.speed;
+    if(ghost.x > player.x) ghost.x -= ghost.speed;
+    if(ghost.y < player.y) ghost.y += ghost.speed;
+    if(ghost.y > player.y) ghost.y -= ghost.speed;
+
+    if(Math.abs(player.x-ghost.x)<20 && Math.abs(player.y-ghost.y)<20){
+        lives--;
+        player.x=50; player.y=50;
+        if(lives<=0) gameOver=true;
+    }
+
+    mouthOpen = !mouthOpen;
+}
+
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    ctx.fillStyle="blue";
+    for(let wall of walls){
+        ctx.fillRect(wall.x,wall.y,wall.w,wall.h);
+    }
+
+    ctx.fillStyle="yellow";
+    if(mouthOpen){
+        ctx.beginPath();
+        ctx.moveTo(player.x+10,player.y+10);
+        ctx.arc(player.x+10,player.y+10,10,0.25*Math.PI,1.75*Math.PI);
+        ctx.fill();
+    }else{
+        ctx.beginPath();
+        ctx.arc(player.x+10,player.y+10,10,0,2*Math.PI);
+        ctx.fill();
+    }
+
+    ctx.fillStyle="white";
+    ctx.fillRect(food.x,food.y,food.size,food.size);
+
+    ctx.fillStyle="pink";
+    ctx.beginPath();
+    ctx.arc(ghost.x+10,ghost.y+10,10,0,2*Math.PI);
+    ctx.fill();
+
+    ctx.fillStyle="red";
+    ctx.font="16px Arial";
+    ctx.fillText("Score: "+score,10,20);
+    ctx.fillText("Lives: "+lives,10,40);
+
+    if(gameOver){
+        ctx.font="40px Arial";
+        ctx.fillText("GAME OVER",180,200);
+    }
+}
+
+function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
